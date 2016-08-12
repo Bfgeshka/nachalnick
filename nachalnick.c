@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+#include <signal.h>
 
 #define NOTIF_COM "notify-send"
 #define CONF_FILE "nachalnick.conf"
@@ -57,9 +58,22 @@ add_task( int argc, char ** argv )
 		if ( argv[i][0] == '-' && argv[i][1] == 'a' )
 		{
 			in_type = atoi( argv[i+1] );
-			strncpy( in_date, argv[i+2], strlen( FORMAT_DT ) );
-			strncpy( in_time, argv[i+3], strlen( FORMAT_TM ) );
-			strncpy( in_text, argv[i+4], BUFSIZE );
+			if ( in_type == 1 )
+			{
+				strncpy( in_date, argv[i+2], strlen( FORMAT_DT ) );
+				strncpy( in_time, argv[i+3], strlen( FORMAT_TM ) );
+				strncpy( in_text, argv[i+4], BUFSIZE );
+			}
+			else if ( in_type == 0 )
+			{
+				/* type 0 uses current time */
+				time_t current_time = time(NULL);
+				struct tm * tstr = localtime( &current_time );
+				sprintf( in_date, "%d.%d.%d", tstr->tm_mday, tstr->tm_mon + 1, tstr->tm_year + 1900 );
+				sprintf( in_time, "%d:%d", tstr->tm_hour, tstr->tm_min );
+				strncpy( in_text, argv[i+2], BUFSIZE );
+			}
+
 		}
 	}
 	FILE * config;
@@ -76,11 +90,92 @@ help_print( void )
 	puts("Options:");
 	puts("  Add entry:");
 	printf("\t-a TYPE [%s %s] \"TEXT\"\n", FORMAT_DT, FORMAT_TM);
-	puts("\twhere TYPE 0 means constant reminding");
+	puts("\tTYPE 0 means constant reminding and not requires any time or date, only text");
+	puts("\tTYPE 1 means delayed reminding and needs time and date");
 	puts("\n  List entries:");
 	puts("\t-L");
 	puts("\n  Remove entry #NUMBER:");
 	puts("\t-r NUMBER");
+}
+
+void
+main_loop( void )
+{
+	FILE * config;
+	char notif_command[BUFSIZE];
+	char * bufline;
+	double time_difference;
+	int ret;
+	short last_activated_entry, todo_active;
+	size_t linelen = 0;
+	ssize_t gline;
+	time_t cur_time, time_buf;
+	unsigned k, lines;
+
+
+	/* daemon loop, sort of */
+	while (1)
+	{
+		/* fill struct */
+		lines = 0;
+		config = fopen( CONF_PATH, "a+" );
+		while( feof(config) == 0 )
+		{
+			gline = getline( &bufline, &linelen, config);
+			if ( gline > 0 )
+				++lines;
+		}
+		lines /= 2;
+
+		if ( lines > 0 )
+		{
+			rewind( config );
+			struct entry en[lines];
+			for ( k = 0; k < lines; ++k )
+			{
+				if ( fgets( bufline, BUFSIZE, config ) == NULL )
+					fprintf( stderr, "string err\n" );
+
+				sscanf( bufline, "%d %d.%d.%d %d:%d",
+				        &en[k].type, &en[k].et.tm_mday, &en[k].et.tm_mon, &en[k].et.tm_year, &en[k].et.tm_hour, &en[k].et.tm_min );
+
+				if ( fgets( en[k].text, BUFSIZE, config ) == NULL )
+					fprintf( stderr, "string err\n" );
+				en[k].text[ strlen(en[k].text) - 1 ] = '\0';
+			}
+
+			/* struct tm conversion to time_t for difftime */
+			cur_time = time( NULL );
+			todo_active = 0;
+			last_activated_entry = 0;
+			for ( k = 0; k < lines; ++k )
+			{
+				/* tm_mon range is 0-11 */
+				--en[k].et.tm_mon;
+				/* tm_year shows num. of years since 1900 AD */
+				en[k].et.tm_year -= 1900;
+				time_buf = mktime( &(en[k].et) );
+				time_difference = difftime( time_buf, cur_time );
+				if ( time_difference <= 0 )
+				{
+					++todo_active;
+					last_activated_entry = k;
+				}
+			}
+			if ( todo_active )
+			{
+				sprintf( notif_command, "%s \"TODO: %s (#%d, +%d more entries)\"",
+				         NOTIF_COM, en[last_activated_entry].text, last_activated_entry + 1, --todo_active );
+
+				ret = system( notif_command );
+				if ( (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) )
+					fprintf( stderr, "system() error\n" );
+			}
+		}
+		/* idle phase */
+		fclose( config );
+		sleep(REFRESH_RATE);
+	}
 }
 
 int
@@ -105,51 +200,7 @@ main( int argc, char ** argv )
 				return 0;
 			}
 			if ( argv[i][1] == 'd' )
-			{
-				FILE * config;
-				char * bufline;
-				size_t linelen = 0;
-				ssize_t gline;
-				unsigned k;
-				unsigned lines;
-
-				/* daemon loop, sort of */
-				while (1)
-				{
-					/* fill structs */
-					lines = 0;
-					config = fopen( CONF_PATH, "r" );
-					while( feof(config) == 0 )
-					{
-						gline = getline( &bufline, &linelen, config);
-						if ( gline > 0 )
-							++lines;
-					}
-
-					lines /= 2;
-					printf("entries: %u\n", lines);
-					rewind( config );
-
-					struct entry en[lines];
-					for ( k = 0; k < lines; ++k )
-					{
-						if ( fgets( bufline, BUFSIZE, config ) == NULL )
-							fprintf( stderr, "string err\n" );
-
-						sscanf( bufline, "%d %d.%d.%d %d:%d",
-								&en[k].type, &en[k].et.tm_mday, &en[k].et.tm_mon, &en[k].et.tm_year, &en[k].et.tm_hour, &en[k].et.tm_min );
-
-						if ( fgets( en[k].text, BUFSIZE, config ) == NULL )
-							fprintf( stderr, "string err\n" );
-
-						printf("%d: %d %s", k + 1, en[k].type, en[k].text);
-					}
-					fclose( config );
-
-
-					sleep(REFRESH_RATE);
-				}
-			}
+				main_loop();
 		}
 	}
 

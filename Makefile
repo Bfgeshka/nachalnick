@@ -1,5 +1,5 @@
 CC = cc
-CFLAGS = -O2 -Wall -Wextra --std=c89 -g
+CFLAGS = -O2 -Wall -Wextra --std=c89
 
 NAME = nachalnick
 SRC = ${NAME}.c
