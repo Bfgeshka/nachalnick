@@ -11,7 +11,7 @@
 #define NOTIF_COM "notify-send"
 #define CONF_FILE "nachalnick.conf"
 #define FORMAT_DT "dd.mm.yyyy "
-#define FORMAT_TM "HH:MM"
+#define FORMAT_TM "HH:MM "
 #define BUFSIZE 512
 #define REFRESH_RATE 600
 char CONF_PATH[BUFSIZE];
@@ -49,8 +49,8 @@ void
 add_task( int argc, char ** argv )
 {
 	int in_type = 0;
-	char in_date[strlen( FORMAT_DT )];
-	char in_time[strlen( FORMAT_TM )];
+	char in_date[ strlen( FORMAT_DT ) ];
+	char in_time[ strlen( FORMAT_TM ) ];
 	char in_text[BUFSIZE];
 	short i;
 	for ( i = 1; i < argc; ++i )
@@ -58,13 +58,13 @@ add_task( int argc, char ** argv )
 		if ( argv[i][0] == '-' && argv[i][1] == 'a' )
 		{
 			in_type = atoi( argv[i+1] );
-			if ( in_type == 1 )
+			if ( in_type != 0 )
 			{
 				strncpy( in_date, argv[i+2], strlen( FORMAT_DT ) );
 				strncpy( in_time, argv[i+3], strlen( FORMAT_TM ) );
 				strncpy( in_text, argv[i+4], BUFSIZE );
 			}
-			else if ( in_type == 0 )
+			else
 			{
 				/* type 0 uses current time */
 				time_t current_time = time(NULL);
@@ -103,17 +103,13 @@ main_loop( void )
 {
 	FILE * config;
 	char notif_command[BUFSIZE];
-	char * bufline;
+	char bufline[BUFSIZE];
 	double time_difference;
 	int ret;
 	short last_activated_entry, todo_active;
-	size_t linelen = 0;
-	ssize_t gline;
 	time_t cur_time, time_buf;
 	unsigned k, lines;
 
-
-	/* daemon loop, sort of */
 	while (1)
 	{
 		/* fill struct */
@@ -121,27 +117,23 @@ main_loop( void )
 		config = fopen( CONF_PATH, "a+" );
 		while( feof(config) == 0 )
 		{
-			gline = getline( &bufline, &linelen, config);
-			if ( gline > 0 )
+			if ( fgets( bufline, BUFSIZE, config ) != NULL )
 				++lines;
 		}
-		lines /= 2;
 
+		lines /= 2;
 		if ( lines > 0 )
 		{
 			rewind( config );
 			struct entry en[lines];
 			for ( k = 0; k < lines; ++k )
 			{
-				if ( fgets( bufline, BUFSIZE, config ) == NULL )
-					fprintf( stderr, "string err\n" );
+				if ( fgets( bufline, BUFSIZE, config ) != NULL )
+					sscanf( bufline, "%d %d.%d.%d %d:%d",
+							&en[k].type, &en[k].et.tm_mday, &en[k].et.tm_mon, &en[k].et.tm_year, &en[k].et.tm_hour, &en[k].et.tm_min );
 
-				sscanf( bufline, "%d %d.%d.%d %d:%d",
-				        &en[k].type, &en[k].et.tm_mday, &en[k].et.tm_mon, &en[k].et.tm_year, &en[k].et.tm_hour, &en[k].et.tm_min );
-
-				if ( fgets( en[k].text, BUFSIZE, config ) == NULL )
-					fprintf( stderr, "string err\n" );
-				en[k].text[ strlen(en[k].text) - 1 ] = '\0';
+				if ( fgets( en[k].text, BUFSIZE, config ) != NULL )
+					en[k].text[ strlen(en[k].text) - 1 ] = '\0';
 			}
 
 			/* struct tm conversion to time_t for difftime */
