@@ -108,8 +108,8 @@ help_print( void )
 	puts("\t-L");
 	puts("\n  Remove entry #NUMBER:");
 	puts("\t-r NUMBER");
-	puts("\n  Set refresh rate:");
-	puts("\t-t NUMBER");
+	puts("\n  Set refresh rate. Set before -d. If not used, refresh will happen every 20mins:");
+	puts("\t-t SECONDS");
 	puts("\n  Start daemon:");
 	puts("\t-d &");
 }
