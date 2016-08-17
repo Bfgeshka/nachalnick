@@ -156,7 +156,8 @@ delete_entry( void )
 		while ( input_value != 0 )
 		{
 			printf( "Select entry for deletion (1...%u). Select 0 for abortion.\n", entries );
-			scanf( "%u", &input_value );
+			if ( scanf( "%u", &input_value ) == 0 )
+				fprintf( stderr, "scanf err\n" );
 			if ( input_value > entries || input_value == 0 )
 				continue;
 			else
@@ -188,11 +189,15 @@ delete_entry( void )
 
 				fclose( config );
 				fclose( cf_tmp );
+				remove( CONF_TMP_FILE );
+
 				input_value = 0;
 			}
 		}
 
 	}
+	else
+		puts("No entries");
 }
 
 void
