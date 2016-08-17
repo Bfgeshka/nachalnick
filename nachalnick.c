@@ -1,13 +1,13 @@
 #define _GNU_SOURCE
+#include <errno.h>
 #include <pwd.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
-#include <signal.h>
-#include <errno.h>
 
 #define NOTIF_COM "notify-send"
 #define CONF_FILE "nachalnick.conf"
@@ -218,10 +218,8 @@ main_loop( void )
 		lines = 0;
 		config = fopen( CONF_PATH, "a+" );
 		while( feof(config) == 0 )
-		{
 			if ( fgets( bufline, BUFSIZE, config ) != NULL )
 				++lines;
-		}
 
 		lines /= 2;
 		if ( lines > 0 )
@@ -259,8 +257,8 @@ main_loop( void )
 			}
 			if ( todo_active )
 			{
-				sprintf( notif_command, "%s \"TODO: %s (#%d, +%d more entries)\"",
-				         NOTIF_COM, en[last_activated_entry].text, last_activated_entry + 1, --todo_active );
+				sprintf( notif_command, "%s \"TODO: %s (%d more entries)\"",
+				         NOTIF_COM, en[last_activated_entry].text, --todo_active );
 
 				ret = system( notif_command );
 				if ( (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) )
@@ -269,6 +267,7 @@ main_loop( void )
 
 			free( en );
 		}
+
 		/* idle phase */
 		fclose( config );
 		sleep(REFRESH_RATE);
