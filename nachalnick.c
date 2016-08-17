@@ -9,17 +9,22 @@
 #include <time.h>
 #include <unistd.h>
 
-#define NOTIF_COM "notify-send"
-#define CONF_FILE "nachalnick.conf"
-#define CONF_TMP_FILE "/tmp/nachalnick.conf.back"
 #define FORMAT_DT "dd.mm.yyyy"
 #define FORMAT_TM "HH:MM"
 #define FORMAT_DT_SIZE 11
 #define FORMAT_TM_SIZE 6
 #define BUFSIZE 512
-
-unsigned REFRESH_RATE = 1200;
 char CONF_PATH[BUFSIZE];
+
+/* Zone of interest */
+/* Command for invoking notification */
+#define NOTIF_COM "notify-send"
+/* Config file name */
+#define CONF_FILE "nachalnick.conf"
+/* Temporary file full path */
+#define CONF_TMP_FILE "/tmp/nachalnick.conf.back"
+/* Default refresh rate in seconds, default is 1200, i.e. 20min */
+unsigned REFRESH_RATE = 1200;
 
 struct entry
 {
