@@ -10,8 +10,10 @@
 
 #define NOTIF_COM "notify-send"
 #define CONF_FILE "nachalnick.conf"
-#define FORMAT_DT "dd.mm.yyyy "
-#define FORMAT_TM "HH:MM "
+#define FORMAT_DT "dd.mm.yyyy"
+#define FORMAT_TM "HH:MM"
+#define FORMAT_DT_SIZE 11
+#define FORMAT_TM_SIZE 6
 #define BUFSIZE 512
 #define REFRESH_RATE 600
 char CONF_PATH[BUFSIZE];
@@ -49,10 +51,14 @@ void
 add_task( int argc, char ** argv )
 {
 	int in_type = 0;
-	char in_date[ strlen( FORMAT_DT ) ];
+/*	char in_date[ strlen( FORMAT_DT ) ];
 	char in_time[ strlen( FORMAT_TM ) ];
-	char in_text[BUFSIZE];
+*/	char in_text[BUFSIZE];
+	char in_date[ FORMAT_DT_SIZE ];
+	char in_time[ FORMAT_TM_SIZE ];
 	short i;
+	FILE * config;
+
 	for ( i = 1; i < argc; ++i )
 	{
 		if ( argv[i][0] == '-' && argv[i][1] == 'a' )
@@ -76,7 +82,7 @@ add_task( int argc, char ** argv )
 
 		}
 	}
-	FILE * config;
+
 	config = fopen( CONF_PATH, "a" );
 	fprintf( config, "%i %s %s\n%s\n", in_type, in_date, in_time, in_text );
 	fclose( config );
@@ -102,8 +108,8 @@ void
 main_loop( void )
 {
 	FILE * config;
-	char notif_command[BUFSIZE];
 	char bufline[BUFSIZE];
+	char notif_command[BUFSIZE];
 	double time_difference;
 	int ret;
 	short last_activated_entry, todo_active;
@@ -124,8 +130,11 @@ main_loop( void )
 		lines /= 2;
 		if ( lines > 0 )
 		{
+	/*		struct entry en[lines];
+	*/
+			struct entry * en;
+			en = malloc( sizeof( struct entry ) * lines );
 			rewind( config );
-			struct entry en[lines];
 			for ( k = 0; k < lines; ++k )
 			{
 				if ( fgets( bufline, BUFSIZE, config ) != NULL )
@@ -163,6 +172,8 @@ main_loop( void )
 				if ( (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) )
 					fprintf( stderr, "system() error\n" );
 			}
+
+			free( en );
 		}
 		/* idle phase */
 		fclose( config );
@@ -173,10 +184,11 @@ main_loop( void )
 int
 main( int argc, char ** argv )
 {
+	short i;
+
 	set_path();
 
 	/* Reading arguments */
-	short i;
 	for ( i = 1; i < argc; ++i )
 	{
 		if ( argv[i][0] == '-' )

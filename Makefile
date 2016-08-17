@@ -1,5 +1,5 @@
 CC = cc
-CFLAGS = -O3 -Wall -Wextra --std=c89 -pipe
+CFLAGS = -Wall -Wextra -pedantic --std=c89 -pipe -O3 -march=native -s
 LDFLAGS = -Wl,-O1
 
 NAME = nachalnick
