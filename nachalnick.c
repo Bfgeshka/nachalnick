@@ -20,9 +20,9 @@ char CONF_PATH[BUFSIZE];
 /* Command for invoking notification */
 #define NOTIF_COM "notify-send"
 /* Config file name */
-#define CONF_FILE "nachalnick.conf"
+#define CONF_FILE "nach.list"
 /* Temporary file full path */
-#define CONF_TMP_FILE "/tmp/nachalnick.conf.back"
+#define CONF_TMP_FILE "/tmp/nach.list.back"
 /* Default refresh rate in seconds, default is 1200, i.e. 20min */
 unsigned REFRESH_RATE = 1200;
 
