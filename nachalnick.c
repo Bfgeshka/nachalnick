@@ -11,6 +11,7 @@
 
 #define NOTIF_COM "notify-send"
 #define CONF_FILE "nachalnick.conf"
+#define CONF_TMP_FILE "/tmp/nachalnick.conf.back"
 #define FORMAT_DT "dd.mm.yyyy"
 #define FORMAT_TM "HH:MM"
 #define FORMAT_DT_SIZE 11
@@ -96,12 +97,16 @@ help_print( void )
 	puts("Options:");
 	puts("  Add entry:");
 	printf("\t-a TYPE [%s %s] \"TEXT\"\n", FORMAT_DT, FORMAT_TM);
-	puts("\tTYPE 0 means constant reminding and not requires any time or date, only text");
-	puts("\tTYPE 1 means delayed reminding and needs time and date");
+	puts("\tTYPE 0 means constant reminding and nees only text");
+	puts("\tTYPE 1 means delayed reminding and needs time and date before text");
 	puts("\n  List entries:");
 	puts("\t-L");
 	puts("\n  Remove entry #NUMBER:");
 	puts("\t-r NUMBER");
+	puts("\n  Set refresh rate:");
+	puts("\t-t NUMBER");
+	puts("\n  Start daemon:");
+	puts("\t-d &");
 }
 
 unsigned
@@ -135,7 +140,59 @@ list_print( void )
 					printf ( "%u. %s", i / 2, bufline );
 	}
 
+	fclose( config );
 	return lines / 2;
+}
+
+void
+delete_entry( void )
+{
+	unsigned entries;
+	unsigned input_value;
+	input_value = 1;
+	entries = list_print();
+	if ( entries > 0 )
+	{
+		while ( input_value != 0 )
+		{
+			printf( "Select entry for deletion (1...%u). Select 0 for abortion.\n", entries );
+			scanf( "%u", &input_value );
+			if ( input_value > entries || input_value == 0 )
+				continue;
+			else
+			{
+				FILE * config;
+				FILE * cf_tmp;
+				char bufline[BUFSIZE];
+				unsigned i;
+
+				/* copy saved strings to tmp file */
+				config = fopen( CONF_PATH, "r" );
+				cf_tmp = fopen( CONF_TMP_FILE, "w" );
+
+				for ( i = 1; i <= ( entries * 2 ); ++i )
+					if ( fgets( bufline, BUFSIZE, config ) != NULL )
+						if ( i != ( 2 * input_value - 1) && i != ( 2 * input_value ) )
+							fprintf( cf_tmp, "%s", bufline );
+
+				fclose( config );
+				fclose( cf_tmp );
+
+				/* copy to original file */
+				config = fopen( CONF_PATH, "w" );
+				cf_tmp = fopen( CONF_TMP_FILE, "r" );
+
+				for ( i = 1; i <= ( (entries - 1) * 2 ); ++i )
+					if ( fgets( bufline, BUFSIZE, cf_tmp ) != NULL )
+							fprintf( config, "%s", bufline );
+
+				fclose( config );
+				fclose( cf_tmp );
+				input_value = 0;
+			}
+		}
+
+	}
 }
 
 void
@@ -230,6 +287,11 @@ main( int argc, char ** argv )
 			if ( argv[i][1] == 'L' )
 			{
 				printf( "Total entries: %u\n", list_print() );
+				return 0;
+			}
+			if ( argv[i][1] == 'r' )
+			{
+				delete_entry();
 				return 0;
 			}
 			if ( argv[i][1] == 'a' )
