@@ -7,6 +7,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
 
 #define NOTIF_COM "notify-send"
 #define CONF_FILE "nachalnick.conf"
@@ -15,7 +16,8 @@
 #define FORMAT_DT_SIZE 11
 #define FORMAT_TM_SIZE 6
 #define BUFSIZE 512
-#define REFRESH_RATE 600
+
+unsigned REFRESH_RATE = 1200;
 char CONF_PATH[BUFSIZE];
 
 struct entry
@@ -51,9 +53,7 @@ void
 add_task( int argc, char ** argv )
 {
 	int in_type = 0;
-/*	char in_date[ strlen( FORMAT_DT ) ];
-	char in_time[ strlen( FORMAT_TM ) ];
-*/	char in_text[BUFSIZE];
+	char in_text[ BUFSIZE ];
 	char in_date[ FORMAT_DT_SIZE ];
 	char in_time[ FORMAT_TM_SIZE ];
 	short i;
@@ -66,8 +66,8 @@ add_task( int argc, char ** argv )
 			in_type = atoi( argv[i+1] );
 			if ( in_type != 0 )
 			{
-				strncpy( in_date, argv[i+2], strlen( FORMAT_DT ) );
-				strncpy( in_time, argv[i+3], strlen( FORMAT_TM ) );
+				strncpy( in_date, argv[i+2], FORMAT_DT_SIZE );
+				strncpy( in_time, argv[i+3], FORMAT_TM_SIZE );
 				strncpy( in_text, argv[i+4], BUFSIZE );
 			}
 			else
@@ -104,6 +104,40 @@ help_print( void )
 	puts("\t-r NUMBER");
 }
 
+unsigned
+list_print( void )
+{
+	FILE * config;
+	char bufline[BUFSIZE];
+	int err;
+	unsigned lines;
+
+	config = fopen( CONF_PATH, "r" );
+	err = errno;
+	if ( err == ENOENT )
+	{
+		puts( "Config file does not exist" );
+		return 0;
+	}
+
+	lines = 0;
+	while( feof(config) == 0 )
+		if ( fgets( bufline, BUFSIZE, config ) != NULL )
+			++lines;
+
+	if ( lines > 0 )
+	{
+		unsigned i;
+		rewind( config );
+		for ( i = 1; i <= lines; ++i )
+			if ( fgets( bufline, BUFSIZE, config ) != NULL )
+				if ( i % 2 == 0 )
+					printf ( "%u. %s", i / 2, bufline );
+	}
+
+	return lines / 2;
+}
+
 void
 main_loop( void )
 {
@@ -130,8 +164,6 @@ main_loop( void )
 		lines /= 2;
 		if ( lines > 0 )
 		{
-	/*		struct entry en[lines];
-	*/
 			struct entry * en;
 			en = malloc( sizeof( struct entry ) * lines );
 			rewind( config );
@@ -193,6 +225,13 @@ main( int argc, char ** argv )
 	{
 		if ( argv[i][0] == '-' )
 		{
+			if ( argv[i][1] == 't' )
+				REFRESH_RATE = (unsigned) atoi ( argv[i+1] );
+			if ( argv[i][1] == 'L' )
+			{
+				printf( "Total entries: %u\n", list_print() );
+				return 0;
+			}
 			if ( argv[i][1] == 'a' )
 			{
 				add_task( argc, argv );
