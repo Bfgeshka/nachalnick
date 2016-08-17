@@ -216,9 +216,11 @@ main_loop( void )
 	short last_activated_entry, todo_active;
 	time_t cur_time, time_buf;
 	unsigned k, lines;
+	struct tm tmp_time;
 
 	while (1)
 	{
+
 		/* fill struct */
 		lines = 0;
 		config = fopen( CONF_PATH, "a+" );
@@ -230,7 +232,7 @@ main_loop( void )
 		if ( lines > 0 )
 		{
 			struct entry * en;
-			en = malloc( sizeof( struct entry ) * lines );
+			en = malloc( sizeof( struct entry ) * lines + 1 );
 			rewind( config );
 			for ( k = 0; k < lines; ++k )
 			{
@@ -243,16 +245,19 @@ main_loop( void )
 			}
 
 			/* struct tm conversion to time_t for difftime */
-			cur_time = time( NULL );
+			time( &cur_time );
 			todo_active = 0;
 			last_activated_entry = 0;
 			for ( k = 0; k < lines; ++k )
 			{
-				/* tm_mon range is 0-11 */
-				--en[k].et.tm_mon;
-				/* tm_year shows num. of years since 1900 AD */
-				en[k].et.tm_year -= 1900;
-				time_buf = mktime( &(en[k].et) );
+				/* mktime uses garbage from somewhere, so we'll use nullified struct tm instance */
+				memset( &tmp_time, 0, sizeof( struct tm ) );
+				tmp_time.tm_year = en[k].et.tm_year - 1900;
+				tmp_time.tm_mon = en[k].et.tm_mon - 1;
+				tmp_time.tm_mday = en[k].et.tm_mday;
+				tmp_time.tm_hour = en[k].et.tm_hour;
+				tmp_time.tm_min = en[k].et.tm_min;
+				time_buf = mktime( &tmp_time );
 				time_difference = difftime( time_buf, cur_time );
 				if ( time_difference <= 0 )
 				{
@@ -260,6 +265,7 @@ main_loop( void )
 					last_activated_entry = k;
 				}
 			}
+
 			if ( todo_active )
 			{
 				sprintf( notif_command, "%s \"TODO: %s (%d more entries)\"",
