@@ -18,4 +18,6 @@ Starting background notifier process : ```nachalnick -d &```
 
 Adding simple todo entry: ```nachalnick -a 0 "TEXT"```
 
+List entries: ```nachalnick -L```
+
 More info: ```nachalnick -h```
