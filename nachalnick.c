@@ -190,7 +190,7 @@ delete_entry( void )
 
 				for ( i = 1; i <= ( (entries - 1) * 2 ); ++i )
 					if ( fgets( bufline, BUFSIZE, cf_tmp ) != NULL )
-							fprintf( config, "%s", bufline );
+						fprintf( config, "%s", bufline );
 
 				fclose( config );
 				fclose( cf_tmp );
@@ -220,7 +220,6 @@ main_loop( void )
 
 	while (1)
 	{
-
 		/* fill struct */
 		lines = 0;
 		config = fopen( CONF_PATH, "a+" );
@@ -238,7 +237,7 @@ main_loop( void )
 			{
 				if ( fgets( bufline, BUFSIZE, config ) != NULL )
 					sscanf( bufline, "%d %d.%d.%d %d:%d",
-							&en[k].type, &en[k].et.tm_mday, &en[k].et.tm_mon, &en[k].et.tm_year, &en[k].et.tm_hour, &en[k].et.tm_min );
+					        &en[k].type, &en[k].et.tm_mday, &en[k].et.tm_mon, &en[k].et.tm_year, &en[k].et.tm_hour, &en[k].et.tm_min );
 
 				if ( fgets( en[k].text, BUFSIZE, config ) != NULL )
 					en[k].text[ strlen(en[k].text) - 1 ] = '\0';
@@ -299,6 +298,28 @@ main( int argc, char ** argv )
 		{
 			if ( argv[i][1] == 't' )
 				REFRESH_RATE = (unsigned) atoi ( argv[i+1] );
+
+			switch(argv[i][1])
+			{
+			case 'L':
+				printf( "Total entries: %u\n", list_print() );
+				return 0;
+			case 'r':
+				delete_entry();
+				return 0;
+			case 'a':
+				add_task( argc, argv );
+				return 0;
+			case 'h':
+				help_print();
+				return 0;
+			case 'd':
+				main_loop();
+				break;
+			default:
+				return 0;
+			}
+			/*
 			if ( argv[i][1] == 'L' )
 			{
 				printf( "Total entries: %u\n", list_print() );
@@ -320,8 +341,9 @@ main( int argc, char ** argv )
 				return 0;
 			}
 			if ( argv[i][1] == 'd' )
-				main_loop();
+				main_loop();*/
 		}
+
 	}
 
 	/* no valid arguments, print help and exit */

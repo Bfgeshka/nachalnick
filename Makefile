@@ -1,6 +1,5 @@
 CC = cc
-CFLAGS = -Wall -Wextra -pedantic --std=c89 -pipe -O3 -march=native -s
-LDFLAGS = -Wl,-O1
+CFLAGS += -Wall -Wextra -pedantic --std=c89 -pipe -O3 -march=native
 
 NAME = nachalnick
 SRC = ${NAME}.c
