@@ -13,8 +13,7 @@
 #define FORMAT_TM "HH:MM"
 #define FORMAT_DT_SIZE 11
 #define FORMAT_TM_SIZE 6
-#define BUFSIZE 512
-char CONF_PATH[BUFSIZE];
+char CONF_PATH[BUFSIZ];
 
 /* Zone of interest */
 /* Command for invoking notification */
@@ -30,7 +29,7 @@ struct entry
 {
 	int type;
 	struct tm et;
-	char text[BUFSIZE];
+	char text[BUFSIZ];
 };
 
 void
@@ -59,7 +58,7 @@ void
 add_task( int argc, char ** argv )
 {
 	int in_type = 0;
-	char in_text[ BUFSIZE ];
+	char in_text[ BUFSIZ ];
 	char in_date[ FORMAT_DT_SIZE ];
 	char in_time[ FORMAT_TM_SIZE ];
 	short i;
@@ -74,7 +73,7 @@ add_task( int argc, char ** argv )
 			{
 				strncpy( in_date, argv[i+2], FORMAT_DT_SIZE );
 				strncpy( in_time, argv[i+3], FORMAT_TM_SIZE );
-				strncpy( in_text, argv[i+4], BUFSIZE );
+				strncpy( in_text, argv[i+4], BUFSIZ );
 			}
 			else
 			{
@@ -83,7 +82,7 @@ add_task( int argc, char ** argv )
 				struct tm * tstr = localtime( &current_time );
 				sprintf( in_date, "%d.%d.%d", tstr->tm_mday, tstr->tm_mon + 1, tstr->tm_year + 1900 );
 				sprintf( in_time, "%d:%d", tstr->tm_hour, tstr->tm_min );
-				strncpy( in_text, argv[i+2], BUFSIZE );
+				strncpy( in_text, argv[i+2], BUFSIZ );
 			}
 
 		}
@@ -118,7 +117,7 @@ unsigned
 list_print( void )
 {
 	FILE * config;
-	char bufline[BUFSIZE];
+	char bufline[BUFSIZ];
 	int err;
 	unsigned lines;
 
@@ -132,7 +131,7 @@ list_print( void )
 
 	lines = 0;
 	while( feof(config) == 0 )
-		if ( fgets( bufline, BUFSIZE, config ) != NULL )
+		if ( fgets( bufline, BUFSIZ, config ) != NULL )
 			++lines;
 
 	if ( lines > 0 )
@@ -140,7 +139,7 @@ list_print( void )
 		unsigned i;
 		rewind( config );
 		for ( i = 1; i <= lines; ++i )
-			if ( fgets( bufline, BUFSIZE, config ) != NULL )
+			if ( fgets( bufline, BUFSIZ, config ) != NULL )
 				if ( i % 2 == 0 )
 					printf ( "%u. %s", i / 2, bufline );
 	}
@@ -150,26 +149,33 @@ list_print( void )
 }
 
 void
-delete_entry( void )
+delete_entry( int num )
 {
 	unsigned entries;
 	unsigned input_value;
 	input_value = 1;
 	entries = list_print();
+
 	if ( entries > 0 )
 	{
 		while ( input_value != 0 )
 		{
-			printf( "Select entry for deletion (1...%u). Select 0 for abortion.\n", entries );
-			if ( scanf( "%u", &input_value ) == 0 )
-				fprintf( stderr, "scanf err\n" );
+			if ( num < 0 || entries < (unsigned) num )
+			{
+				printf( "Select entry for deletion (1...%u). Select 0 for abortion.\n", entries );
+				if ( scanf( "%u", &input_value ) == 0 )
+					fprintf( stderr, "scanf err\n" );
+			}
+			else
+				input_value = num;
+
 			if ( input_value > entries || input_value == 0 )
 				continue;
 			else
 			{
 				FILE * config;
 				FILE * cf_tmp;
-				char bufline[BUFSIZE];
+				char bufline[BUFSIZ];
 				unsigned i;
 
 				/* copy saved strings to tmp file */
@@ -177,7 +183,7 @@ delete_entry( void )
 				cf_tmp = fopen( CONF_TMP_FILE, "w" );
 
 				for ( i = 1; i <= ( entries * 2 ); ++i )
-					if ( fgets( bufline, BUFSIZE, config ) != NULL )
+					if ( fgets( bufline, BUFSIZ, config ) != NULL )
 						if ( i != ( 2 * input_value - 1) && i != ( 2 * input_value ) )
 							fprintf( cf_tmp, "%s", bufline );
 
@@ -189,13 +195,14 @@ delete_entry( void )
 				cf_tmp = fopen( CONF_TMP_FILE, "r" );
 
 				for ( i = 1; i <= ( (entries - 1) * 2 ); ++i )
-					if ( fgets( bufline, BUFSIZE, cf_tmp ) != NULL )
+					if ( fgets( bufline, BUFSIZ, cf_tmp ) != NULL )
 						fprintf( config, "%s", bufline );
 
 				fclose( config );
 				fclose( cf_tmp );
 				remove( CONF_TMP_FILE );
 
+				printf("\nEntry %u removed", input_value);
 				input_value = 0;
 			}
 		}
@@ -209,8 +216,8 @@ void
 main_loop( void )
 {
 	FILE * config;
-	char bufline[BUFSIZE];
-	char notif_command[BUFSIZE];
+	char bufline[BUFSIZ];
+	char notif_command[BUFSIZ];
 	double time_difference;
 	int ret;
 	short last_activated_entry, todo_active;
@@ -224,7 +231,7 @@ main_loop( void )
 		lines = 0;
 		config = fopen( CONF_PATH, "a+" );
 		while( feof(config) == 0 )
-			if ( fgets( bufline, BUFSIZE, config ) != NULL )
+			if ( fgets( bufline, BUFSIZ, config ) != NULL )
 				++lines;
 
 		lines /= 2;
@@ -235,11 +242,11 @@ main_loop( void )
 			rewind( config );
 			for ( k = 0; k < lines; ++k )
 			{
-				if ( fgets( bufline, BUFSIZE, config ) != NULL )
+				if ( fgets( bufline, BUFSIZ, config ) != NULL )
 					sscanf( bufline, "%d %d.%d.%d %d:%d",
 					        &en[k].type, &en[k].et.tm_mday, &en[k].et.tm_mon, &en[k].et.tm_year, &en[k].et.tm_hour, &en[k].et.tm_min );
 
-				if ( fgets( en[k].text, BUFSIZE, config ) != NULL )
+				if ( fgets( en[k].text, BUFSIZ, config ) != NULL )
 					en[k].text[ strlen(en[k].text) - 1 ] = '\0';
 			}
 
@@ -299,13 +306,16 @@ main( int argc, char ** argv )
 			if ( argv[i][1] == 't' )
 				REFRESH_RATE = (unsigned) atoi ( argv[i+1] );
 
-			switch(argv[i][1])
+			switch( argv[i][1] )
 			{
 			case 'L':
 				printf( "Total entries: %u\n", list_print() );
 				return 0;
 			case 'r':
-				delete_entry();
+				if ( argc > i+1 && argv[i+1][0] != '-' )
+					delete_entry( atoi( argv[i+1] ) );
+				else
+					delete_entry( -1 );
 				return 0;
 			case 'a':
 				add_task( argc, argv );
@@ -319,31 +329,7 @@ main( int argc, char ** argv )
 			default:
 				return 0;
 			}
-			/*
-			if ( argv[i][1] == 'L' )
-			{
-				printf( "Total entries: %u\n", list_print() );
-				return 0;
-			}
-			if ( argv[i][1] == 'r' )
-			{
-				delete_entry();
-				return 0;
-			}
-			if ( argv[i][1] == 'a' )
-			{
-				add_task( argc, argv );
-				return 0;
-			}
-			if ( argv[i][1] == 'h' )
-			{
-				help_print();
-				return 0;
-			}
-			if ( argv[i][1] == 'd' )
-				main_loop();*/
 		}
-
 	}
 
 	/* no valid arguments, print help and exit */
