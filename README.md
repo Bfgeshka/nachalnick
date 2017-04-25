@@ -1,7 +1,5 @@
 # nachalnick
 
-=======
-
 Simple TODO linux application.
 Relies on sending notifications via ```notify-send```, but can be easily replaced with another command (see definitions section of source file).
 
